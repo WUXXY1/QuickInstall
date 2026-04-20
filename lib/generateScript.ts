@@ -1,23 +1,20 @@
-// Toda a lógica de geração de script sem sudo vive aqui.
-// Separar do componente facilita testes unitários.
-
 export type PackageType = 'deb' | 'tar.gz' | 'tar.xz' | 'tar.bz2' | 'zip';
 
 export interface ScriptOptions {
-  proxyEnabled: boolean;   // prefixar URL com proxy para contornar bloqueios
-  quad9Enabled: boolean;   // resolver DNS via Quad9 DoH antes do download
-  checksumEnabled: boolean;// solicitar e verificar SHA256 antes de extrair
+  proxyEnabled: boolean;
+  quad9Enabled: boolean;
+  checksumEnabled: boolean;
 }
 
 const PROXY_PREFIX = 'https://corsproxy.io/?';
 
 export function detectType(filename: string): PackageType {
-  if (filename.endsWith('.deb'))     return 'deb';
-  if (filename.endsWith('.tar.xz')) return 'tar.xz';
-  if (filename.endsWith('.tar.bz2'))return 'tar.bz2';
+  if (filename.endsWith('.deb'))      return 'deb';
+  if (filename.endsWith('.tar.xz'))  return 'tar.xz';
+  if (filename.endsWith('.tar.bz2')) return 'tar.bz2';
   if (filename.endsWith('.tgz') || filename.endsWith('.tar.gz')) return 'tar.gz';
   if (filename.endsWith('.zip'))     return 'zip';
-  return 'tar.gz'; // fallback seguro
+  return 'tar.gz';
 }
 
 export function generateScript(
@@ -25,8 +22,9 @@ export function generateScript(
   type: PackageType,
   opts: ScriptOptions
 ): string {
-  // Nome do binário derivado da URL (ex: "myapp" de "myapp-1.0.tar.gz")
-  const binName = url.split('/').pop()!
+  const binName = url
+    .split('/')
+    .pop()!
     .replace(/\.(deb|tar\.gz|tgz|tar\.xz|tar\.bz2|zip)$/, '');
 
   const downloadUrl = opts.proxyEnabled
@@ -42,11 +40,9 @@ export function generateScript(
     '',
   ];
 
-  // ── Bloco Quad9: resolve o hostname via DoH antes de qualquer conexão
-  // Isso garante que o DNS corporativo ou do ISP não bloqueie a resolução
   if (opts.quad9Enabled) {
     lines.push(
-      '# Quad9 DoH: evita vazamento de DNS resolvendo antes do curl',
+      '# Quad9 DoH: resolve DNS antes do download para evitar vazamentos',
       'resolve_via_quad9() {',
       '  local host="$1"',
       '  curl -sf "https://dns.quad9.net:5053/dns-query?name=${host}&type=A" \\',
@@ -62,13 +58,12 @@ export function generateScript(
 
   if (opts.checksumEnabled) {
     lines.push(
-      '# Verificação de integridade opcional',
+      '# Verificação de integridade SHA256 opcional',
       'read -rp "SHA256 esperado (Enter para pular): " EXPECTED_HASH',
       '',
     );
   }
 
-  // ── Diretórios de instalação local (sem sudo)
   lines.push(
     '# Diretórios locais — sem necessidade de root',
     'BIN_DIR="$HOME/.local/bin"',
@@ -77,11 +72,10 @@ export function generateScript(
     '',
     'mkdir -p "$BIN_DIR" "$LIB_DIR"',
     '',
-    'echo "⟳ Baixando ${binName}..."',
+    'echo "⟳ Baixando..."',
     `PKG="$TMP_DIR/${binName}.${type}"`,
   );
 
-  // ── Download com ou sem resolução Quad9 manual
   if (opts.quad9Enabled) {
     lines.push(
       'curl -fL --progress-bar \\',
@@ -96,7 +90,6 @@ export function generateScript(
     );
   }
 
-  // ── Verificação de hash antes da extração (impede execução de pacote corrompido)
   if (opts.checksumEnabled) {
     lines.push(
       'if [ -n "$EXPECTED_HASH" ]; then',
@@ -109,24 +102,23 @@ export function generateScript(
     );
   }
 
-  // ── Extração sem sudo: cada formato tem sua estratégia
-  lines.push('echo "⟳ Extraindo..."', 'mkdir -p "$TMP_DIR/extracted"', '');
+  lines.push(
+    'echo "⟳ Extraindo..."',
+    'mkdir -p "$TMP_DIR/extracted"',
+    '',
+  );
 
   switch (type) {
     case 'deb':
-      // dpkg-deb -x extrai o conteúdo sem instalar no sistema
-      // Mantém a hierarquia (usr/bin, usr/lib) dentro do TMP_DIR
       lines.push(
-        '# dpkg-deb -x extrai sem precisar de root nem do daemon dpkg',
+        '# dpkg-deb -x extrai sem root nem daemon dpkg',
         'dpkg-deb -x "$PKG" "$TMP_DIR/extracted"',
         '',
-        '# Copia binários de qualquer subpasta */bin para ~/.local/bin',
         'for d in usr/bin usr/local/bin bin; do',
         '  src="$TMP_DIR/extracted/$d"',
         '  [ -d "$src" ] && cp -r "$src"/. "$BIN_DIR/" && chmod +x "$BIN_DIR"/* 2>/dev/null || true',
         'done',
         '',
-        '# Copia bibliotecas preservando estrutura',
         'for d in usr/lib lib; do',
         '  src="$TMP_DIR/extracted/$d"',
         '  [ -d "$src" ] && cp -r "$src"/. "$LIB_DIR/" || true',
@@ -136,13 +128,10 @@ export function generateScript(
 
     case 'tar.gz':
     case 'tgz':
-      // --strip-components=1 remove o diretório raiz do tarball (ex: myapp-1.0/)
       lines.push(
-        '# tar zxf: descomprime gzip e extrai; strip-components remove prefixo raiz',
         'tar -xzf "$PKG" -C "$TMP_DIR/extracted" --strip-components=1 2>/dev/null \\',
         '  || tar -xzf "$PKG" -C "$TMP_DIR/extracted"',
         '',
-        '# Localiza executáveis e copia para ~/.local/bin',
         'find "$TMP_DIR/extracted" -maxdepth 3 -type f -executable \\',
         '  ! -path "*/lib/*" -exec cp {} "$BIN_DIR/" \\;',
         `chmod +x "$BIN_DIR/${binName}" 2>/dev/null || true`,
@@ -153,14 +142,28 @@ export function generateScript(
       lines.push(
         'tar -xJf "$PKG" -C "$TMP_DIR/extracted" --strip-components=1 2>/dev/null \\',
         '  || tar -xJf "$PKG" -C "$TMP_DIR/extracted"',
+        '',
         'find "$TMP_DIR/extracted" -maxdepth 3 -type f -executable \\',
         '  ! -path "*/lib/*" -exec cp {} "$BIN_DIR/" \\;',
+        `chmod +x "$BIN_DIR/${binName}" 2>/dev/null || true`,
+      );
+      break;
+
+    case 'tar.bz2':
+      lines.push(
+        'tar -xjf "$PKG" -C "$TMP_DIR/extracted" --strip-components=1 2>/dev/null \\',
+        '  || tar -xjf "$PKG" -C "$TMP_DIR/extracted"',
+        '',
+        'find "$TMP_DIR/extracted" -maxdepth 3 -type f -executable \\',
+        '  ! -path "*/lib/*" -exec cp {} "$BIN_DIR/" \\;',
+        `chmod +x "$BIN_DIR/${binName}" 2>/dev/null || true`,
       );
       break;
 
     case 'zip':
       lines.push(
         'unzip -q "$PKG" -d "$TMP_DIR/extracted"',
+        '',
         'find "$TMP_DIR/extracted" -maxdepth 3 -type f -executable \\',
         '  -exec cp {} "$BIN_DIR/" \\;',
         'chmod +x "$BIN_DIR"/* 2>/dev/null || true',
@@ -168,10 +171,9 @@ export function generateScript(
       break;
   }
 
-  // ── Adiciona PATH de forma idempotente (não duplica se já existir)
   lines.push(
     '',
-    '# Adiciona ~/.local/bin ao PATH nos shell configs (idempotente)',
+    '# Adiciona ~/.local/bin ao PATH de forma idempotente',
     'add_to_path() {',
     '  local rc="$1"',
     "  local line='export PATH=\"$HOME/.local/bin:$PATH\"'",
@@ -185,7 +187,6 @@ export function generateScript(
     '[ -f "$HOME/.zshrc" ]   && add_to_path "$HOME/.zshrc"',
     '[ -f "$HOME/.profile" ] && add_to_path "$HOME/.profile"',
     '',
-    '# Limpa arquivos temporários',
     'rm -rf "$TMP_DIR"',
     '',
     'echo ""',
