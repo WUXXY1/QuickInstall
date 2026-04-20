@@ -1,0 +1,290 @@
+/* app/globals.css
+   Estilos globais do QuickInstall — tema terminal dark
+   Importado pelo layout.tsx automaticamente pelo Next.js App Router
+*/
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Variáveis CSS raiz ─────────────────────────────────────────────────── */
+:root {
+  /* Cores principais do terminal */
+  --color-green:   #00e57a;
+  --color-bright:  #00ff8a;
+  --color-muted:   #00b85e;
+  --color-dark:    #004d29;
+  --color-bg:      #0a0c0a;
+  --color-panel:   #0f120f;
+  --color-surface: #131713;
+  --color-raised:  #1a1f1a;
+  --color-border:  #1e2a1e;
+  --color-border2: #2a3d2a;
+  --color-dim:     #888888;
+  --color-error:   #ff4d4d;
+  --color-warn:    #f5a623;
+  --color-info:    #6ba3ff;
+
+  /* Tipografia */
+  --font-mono-stack: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+
+  /* Scanlines */
+  --scanline-size: 3px;
+  --scanline-opacity: 0.025;
+}
+
+/* ── Reset / Base ───────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  /* Scroll suave — melhora UX em navegação interna */
+  scroll-behavior: smooth;
+  /* Evita layout shift quando scrollbar aparece */
+  scrollbar-gutter: stable;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-green);
+  font-family: var(--font-mono-stack);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Evita overflow horizontal em mobile */
+  overflow-x: hidden;
+}
+
+/* ── Efeito Scanlines ───────────────────────────────────────────────────── */
+/* Camada puramente decorativa que simula linhas horizontais de monitor CRT.
+   Usa um gradiente linear repetido de 2px transparente + 1px semiopaco.
+   pointer-events: none garante que não interfere com cliques. */
+.scanlines {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent calc(var(--scanline-size) - 1px),
+    rgba(0, 0, 0, var(--scanline-opacity)) calc(var(--scanline-size) - 1px),
+    rgba(0, 0, 0, var(--scanline-opacity)) var(--scanline-size)
+  );
+  /* Impede que a camada apareça em prints */
+  @media print { display: none; }
+}
+
+/* ── Scrollbar customizada (Webkit) ─────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border2);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-muted);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border2) var(--color-bg);
+}
+
+/* ── Seleção de texto ───────────────────────────────────────────────────── */
+::selection {
+  background: rgba(0, 229, 122, 0.18);
+  color: var(--color-bright);
+}
+
+/* ── Foco acessível ─────────────────────────────────────────────────────── */
+/* Mantém outline visível apenas para navegação por teclado (não mouse) */
+:focus-visible {
+  outline: 2px solid rgba(0, 229, 122, 0.5);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ── Inputs e textareas ─────────────────────────────────────────────────── */
+input,
+textarea,
+select {
+  background: var(--color-panel);
+  border: 1px solid var(--color-border);
+  color: var(--color-green);
+  font-family: var(--font-mono-stack);
+  border-radius: 4px;
+  transition: border-color 150ms ease;
+}
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--color-green);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 229, 122, 0.15);
+}
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-dim);
+}
+
+/* ── Botões base ────────────────────────────────────────────────────────── */
+button {
+  font-family: var(--font-mono-stack);
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+button:active {
+  transform: scale(0.97);
+}
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ── Syntax Highlighting para o <pre> do script gerado ──────────────────── */
+/* Classes aplicadas via JS no componente page.tsx */
+.sh-comment  { color: #3d5c3d; }   /* comentários Bash — verde musgo escuro */
+.sh-keyword  { color: #6ba3ff; }   /* palavras-chave (if, for, do…) — azul */
+.sh-string   { color: #f5a623; }   /* strings entre aspas — laranja */
+.sh-variable { color: var(--color-green); }  /* $VARIAVEL — verde principal */
+.sh-command  { color: #c792ea; }   /* comandos conhecidos (curl, tar…) — lilás */
+.sh-flag     { color: #80cbc4; }   /* flags (--progress-bar…) — teal */
+
+/* ── Utilitários de componente ──────────────────────────────────────────── */
+@layer components {
+  /* Painel genérico reutilizável */
+  .panel {
+    @apply bg-terminal-panel border border-terminal-border rounded-lg p-5;
+  }
+
+  /* Label de seção com linha separadora */
+  .section-label {
+    @apply text-2xs text-terminal-dim uppercase tracking-widest mb-3
+           flex items-center gap-3;
+  }
+  .section-label::after {
+    content: '';
+    @apply flex-1 h-px bg-terminal-border;
+  }
+
+  /* Prompt de terminal (prefixo "~/$ ") */
+  .prompt::before {
+    content: '$ ';
+    @apply text-terminal-muted;
+  }
+
+  /* Pill / badge de tipo de arquivo */
+  .file-pill {
+    @apply text-2xs px-1.5 py-0.5 rounded border border-terminal-border
+           text-terminal-dim font-mono;
+  }
+
+  /* Caixa de código copiável */
+  .code-box {
+    @apply bg-black border border-terminal-border rounded-lg
+           px-3 py-2.5 flex items-center gap-3 font-mono;
+  }
+
+  /* Botão secundário padrão */
+  .btn {
+    @apply border border-terminal-border text-terminal-dim text-xs
+           px-3 py-1.5 rounded transition-all duration-fast
+           hover:border-terminal-border2 hover:text-terminal-green
+           active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  /* Botão primário (verde) */
+  .btn-primary {
+    @apply btn border-terminal-green text-terminal-green
+           hover:bg-terminal-green hover:text-terminal-bg;
+  }
+
+  /* Toggle switch */
+  .switch {
+    @apply w-9 h-5 rounded-full border border-terminal-border
+           bg-terminal-raised relative transition-all duration-150
+           cursor-pointer flex-shrink-0;
+  }
+  .switch::after {
+    content: '';
+    @apply absolute w-3.5 h-3.5 rounded-full top-[2px] left-[2px]
+           bg-terminal-dim transition-all duration-150;
+  }
+  .switch.on {
+    @apply bg-terminal-dark border-terminal-muted;
+  }
+  .switch.on::after {
+    @apply bg-terminal-green left-[18px];
+  }
+
+  /* Status message */
+  .status-ok {
+    @apply text-xs p-2.5 rounded border border-terminal-dark
+           bg-[#001f0f] text-terminal-green;
+  }
+  .status-error {
+    @apply text-xs p-2.5 rounded border border-red-900
+           bg-red-950/50 text-terminal-error;
+  }
+  .status-loading {
+    @apply text-xs p-2.5 rounded border border-terminal-border
+           bg-terminal-raised text-terminal-dim;
+  }
+}
+
+/* ── Utilitários extras ─────────────────────────────────────────────────── */
+@layer utilities {
+  /* Texto truncado com fade */
+  .text-fade {
+    mask-image: linear-gradient(to right, black 70%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, black 70%, transparent 100%);
+  }
+
+  /* Desabilita seleção de texto (para elementos de UI puros) */
+  .no-select {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* Cursor piscando (efeito terminal) */
+  .cursor-blink::after {
+    content: '█';
+    @apply animate-blink text-terminal-green ml-0.5;
+  }
+}
+
+/* ── Animação de entrada de elementos na página ─────────────────────────── */
+/* Aplicada via className="animate-slide-up" com delays escalonados         */
+[data-animate] {
+  animation: slide-up 0.2s ease-out both;
+}
+[data-animate="1"] { animation-delay: 0ms; }
+[data-animate="2"] { animation-delay: 60ms; }
+[data-animate="3"] { animation-delay: 120ms; }
+[data-animate="4"] { animation-delay: 180ms; }
+[data-animate="5"] { animation-delay: 240ms; }
+
+/* ── Print styles ───────────────────────────────────────────────────────── */
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+  .scanlines,
+  footer {
+    display: none;
+  }
+}
