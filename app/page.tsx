@@ -1,5 +1,5 @@
 'use client';
-// Depois (import relativo, funciona sempre):
+import { useState, useCallback, useRef } from 'react';
 import { generateScript, detectType, PackageType, ScriptOptions } from './generateScript';
 
 const DEFAULT_OPTS: ScriptOptions = {
