@@ -1,17 +1,13 @@
-// Esta rota resolve o problema de CORS ao fazer upload para o Litterbox.
-// O browser não pode chamar litterbox.catbox.moe diretamente em produção
-// porque o cabeçalho Access-Control-Allow-Origin não cobre seu domínio.
-// A solução é proxiar via Next.js: browser → /api/upload → litterbox.
-
 import { NextRequest, NextResponse } from 'next/server';
 
-export const runtime = 'edge'; // Edge Runtime: menor latência, sem timeout de 10s
+// ── App Router: configuração via exports de segmento, não via `config` object
+export const runtime = 'edge';
+export const dynamic = 'force-dynamic'; // nunca cachear uploads
 
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
 
-    // Repassamos o FormData diretamente para o Litterbox
     const response = await fetch(
       'https://litterbox.catbox.moe/resources/internals/api.php',
       { method: 'POST', body: formData }
@@ -24,7 +20,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const url = await response.text(); // Litterbox retorna a URL como texto puro
+    const url = await response.text();
     return NextResponse.json({ url: url.trim() });
 
   } catch (err) {
@@ -34,6 +30,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-
-// Limite de 50 MB (ajuste conforme Vercel plan)
-export const config = { api: { bodyParser: false } };
