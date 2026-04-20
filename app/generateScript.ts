@@ -1,4 +1,4 @@
-export type PackageType = 'deb' | 'tar.gz' | 'tar.xz' | 'tar.bz2' | 'zip';
+export type PackageType = 'deb' | 'tar.gz' | 'tgz' | 'tar.xz' | 'tar.bz2' | 'zip';
 
 export interface ScriptOptions {
   proxyEnabled: boolean;
